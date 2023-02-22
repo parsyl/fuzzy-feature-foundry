@@ -46,7 +46,8 @@ class FuzzyCombiner() :
             self.config = {
                 'pairwise_matches' : {
                     'columns' : [],
-                    'data_types' : []
+                    'data_types' : [],
+                    'names':[]
                 },
                 'comparison_metrics' : {} ,
                 'names': []
@@ -58,9 +59,9 @@ class FuzzyCombiner() :
         
         self.config['names'].append((name_1, name_2))
         self.evals = {}
-        n_1, n_2 = len(data_1), len(data_2)
-        self.data_1_ids = [*range(n_1)]
-        self.data_2_ids = [*range(n_1, n_1+n_2)]
+        self.n_1, self.n_2 = len(data_1), len(data_2)
+        self.data_1_ids = data_1.index#[*range(n_1)] #preserve original index
+        self.data_2_ids = data_2.index#[*range(n_1, n_1+n_2)] #want to preserve original index?
         
     def _validate_field_matches(self, field_1, field_2) : 
         """
@@ -73,17 +74,19 @@ class FuzzyCombiner() :
         assert self.data_1[field_1].dtypes == self.data_2[field_2].dtypes, "data type mismatch"
         return self.data_1[field_1].dtypes
 
-    def add_field_comparisons(self, field_1, field_2) : 
+    def add_field_comparisons(self, field_1, field_2, out_name=None) : # give it name other than tuple of fields
         dtype = self._validate_field_matches(field_1, field_2)
         addition = (field_1, field_2)
-
+        name = out_name if out_name is not None else field_1 #default to field 1
         if 'pairwise_matches' not in  self.config : 
             self.config['pairwise_matches'] = {
                 'columns':[],
-                'data_types':[]
+                'data_types':[],
+                'names':[]
             }
         self.config['pairwise_matches']['columns'].append(addition) 
         self.config['pairwise_matches']['data_types'].append(dtype)
+        self.config['pairwise_matches']['names'].append(name)
     
     def _able_to_add_eval(self, field_1, field_2) : 
         assert (field_1, field_2) in \
@@ -92,13 +95,17 @@ class FuzzyCombiner() :
     
     def add_evaluation(
         self, 
-        field_1, 
-        field_2, 
+        name,
         eval_function,
         **kwargs
     ) : 
+        names_list = self.config['pairwise_matches']['names']
+        pairs_list = self.config['pairwise_matches']['columns']
+        assert name in names_list, f'not a valid name : {name}'
+        field_dict = dict(zip(names_list, pairs_list))
+        field_1, field_2 = field_dict[name]
         self._able_to_add_eval(field_1, field_2)
-        self.config['comparison_metrics'][(field_1,field_2)] = \
+        self.config['comparison_metrics'][name] = \
             eval_function
         
         evaluation_data = np.concatenate(
@@ -107,12 +114,23 @@ class FuzzyCombiner() :
                 self.data_2[field_2].values
             )
         )
-        eval = eval_function(evaluation_data, **kwargs)
-        out = {(d_1, d_2) : eval[d_1, d_2]
+        eval_matrix = eval_function(evaluation_data, **kwargs) 
+        out = {(d_1, d_2) : [
+            self.data_1.loc[d_1,field_1], 
+            self.data_2.loc[d_2,field_2], 
+            eval_matrix[d_1, d_2+self.n_1]
+        ]
         for d_1 in self.data_1_ids 
         for d_2 in self.data_2_ids
         }
-        self.evals[(field_1, field_2)] = out
+        nms = self.config['names'][0]
+        cols = [
+            nms[0]+'_'+field_1, 
+            nms[1]+'_'+field_2, 
+            '_'.join([nms[0],field_1,nms[1],field_2])
+        ]
+        self.evals[(field_1, field_2)] = pd.DataFrame().\
+            from_dict(out, orient='index',columns=cols)
     
     def compile_evaluations(self) : 
         """
@@ -120,12 +138,11 @@ class FuzzyCombiner() :
         """
         #make sure able to compile, perform some check
         evals = []
-        nms = self.config['names'][0]
+        
         for k, v in self.evals.items() : 
-            e = pd.DataFrame().from_dict(v, orient='index')
-            nm = '_'.join([nms[0],k[0],nms[1],k[1]])
-            e.columns = [nm]
-            evals.append(e)
+            #nm = '_'.join([nms[0],k[0],nms[1],k[1]])
+            #e.columns = [nm]
+            evals.append(v)
         return pd.concat(evals, axis=1)
 
 
