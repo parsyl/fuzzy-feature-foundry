@@ -1,4 +1,3 @@
-from hologram import T
 from fuzzy_features import * 
 import pandas as pd
 import numpy as np
@@ -12,8 +11,9 @@ from sklearn.metrics.pairwise import (
     euclidean_distances
 )
 
+
 def make_data(ncols=2, nrows=10, dtypes=None) : 
-    strings = ['a','b','c','d']
+    strings = ['allow hi','bet hi','capped','dove allow']
     ints = range(10)
     floats = np.linspace(0,1,34)
     if dtypes is None : 
@@ -38,13 +38,31 @@ def make_data(ncols=2, nrows=10, dtypes=None) :
 
 
 if __name__ == '__main__' : 
-    def eval_func (data) : 
-        tfidf = TfidfVectorizer()
-        matrix = tfidf.fit_transform(data)
-        
-    fz = FuzzyCombiner(make_data(),make_data())
+
+    #data_1 = pd.read_csv('claims.csv')
+    #data_2 = pd.read_csv('shipments.csv')
+    data_1 = make_data(nrows=5)
+    data_2 = make_data(nrows=15)
+    print(data_1)
+    print("\n"*3)
+    print(data_2)
+    print("\n"*3)
+    fz = FuzzyCombiner(data_1,data_2)
     fz.add_field_comparisons('col_0','col_0')
     fz.add_field_comparisons('col_1','col_1')
-    fz.add_evaluation('col_0','col_0', cosine)
+    fz.add_evaluation('col_0','col_0', tfidf_cosine)
+    fz.add_evaluation('col_1','col_1', dummies_cosine)
     print(fz.config)
+    print(fz.compile_evaluations())
+    
+    #fz = FuzzyCombiner(data_1, data_2)
+    #fz.add_field_comparisons('client_exporter','client_exporter')
+    #fz.add_field_comparisons('product','product')
+    #fz.add_evaluation('client_exporter','client_exporter', tfidf_cosine)
+    #print(fz.config)
+    #print(fz.evals[('client_exporter','client_exporter')])
+    #fz.add_evaluation('product','product',dummies_cosine)
+    #print(fz.evals[('product','product')])
+
+
 
