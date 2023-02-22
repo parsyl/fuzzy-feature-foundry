@@ -12,15 +12,6 @@ from sklearn.metrics.pairwise import (
     euclidean_distances
 )
 
-def vectorizer_distance(
-    data=None,
-    vectorizer=TfidfVectorizer,
-    distance=cosine,
-    **vec_kwargs
-) : 
-    vectorizer = vectorizer(**vec_kwargs)
-    vec_text = vectorizer.fit_transform(data)
-
 
 
 # how to make config file?
@@ -99,6 +90,10 @@ class FuzzyCombiner() :
         eval_function,
         **kwargs
     ) : 
+        """
+        Add an evaluation for comparison `name` using eval function
+        and keyword args `kwargs`
+        """
         names_list = self.config['pairwise_matches']['names']
         pairs_list = self.config['pairwise_matches']['columns']
         assert name in names_list, f'not a valid name : {name}'
@@ -118,7 +113,7 @@ class FuzzyCombiner() :
         out = {(d_1, d_2) : [
             self.data_1.loc[d_1,field_1], 
             self.data_2.loc[d_2,field_2], 
-            eval_matrix[d_1, d_2+self.n_1]
+            eval_matrix[d_1, d_2+self.n_1] # note - assumes index of data is range index
         ]
         for d_1 in self.data_1_ids 
         for d_2 in self.data_2_ids
@@ -134,16 +129,12 @@ class FuzzyCombiner() :
     
     def compile_evaluations(self) : 
         """
-        
+        Bring all evaluations into a single dataframe
         """
         #make sure able to compile, perform some check
-        evals = []
-        
-        for k, v in self.evals.items() : 
-            #nm = '_'.join([nms[0],k[0],nms[1],k[1]])
-            #e.columns = [nm]
-            evals.append(v)
-        return pd.concat(evals, axis=1)
+        evals = [v for k, v in self.evals.items()]
+        self.xcompare_data = pd.concat(evals, axis=1)
+        return self.xcompare_data
 
 
 
@@ -186,18 +177,43 @@ def count_cosine(data, **kwargs) :
 
 def dummies_met(data, distance_func, **kwargs) : 
     """
-    
+    matrix is one-hot encoding of column
     """
     matrix = pd.get_dummies(data, **kwargs).to_numpy()
     distance = distance_func(matrix, matrix)
     return distance
 def dummies_cosine(data, **kwargs) : 
     """
-    
+    apply cosine distance to one-hot matrix
     """
     return dummies_met(
         data,
         cosine_distances,
         **kwargs
     )
+    
+def continuous_distance(data, **kwargs) : 
+    """
+    cross compare continuous field
+    """
+    i,j = np.meshgrid(data, data, indexing='ij')
+    return np.subtract(i,j)
+
+def abs_continuous_distance(data, **kwargs) : 
+    """
+    `continous_distance` but positive-negative indifferent
+    """
+    return np.abs(continuous_distance(data, **kwargs))
+
+def date_difference(data, **kwargs) : 
+    """
+    distance of date field, scaled by 
+    """
+    pass
+
+def abs_date_difference(data, **kwargs) : 
+    """
+    absolute difference in dates (positive-negative indifference)
+    """
+    pass
 
