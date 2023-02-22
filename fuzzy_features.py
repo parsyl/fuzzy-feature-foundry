@@ -46,7 +46,8 @@ class FuzzyCombiner() :
             self.config = {
                 'pairwise_matches' : {
                     'columns' : [],
-                    'data_types' : []
+                    'data_types' : [],
+                    'names':[]
                 },
                 'comparison_metrics' : {} ,
                 'names': []
@@ -73,17 +74,19 @@ class FuzzyCombiner() :
         assert self.data_1[field_1].dtypes == self.data_2[field_2].dtypes, "data type mismatch"
         return self.data_1[field_1].dtypes
 
-    def add_field_comparisons(self, field_1, field_2) : 
+    def add_field_comparisons(self, field_1, field_2, out_name=None) : # give it name other than tuple of fields
         dtype = self._validate_field_matches(field_1, field_2)
         addition = (field_1, field_2)
-
+        name = out_name if out_name is not None else field_1 #default to field 1
         if 'pairwise_matches' not in  self.config : 
             self.config['pairwise_matches'] = {
                 'columns':[],
-                'data_types':[]
+                'data_types':[],
+                'names':[]
             }
         self.config['pairwise_matches']['columns'].append(addition) 
         self.config['pairwise_matches']['data_types'].append(dtype)
+        self.config['pairwise_matches']['names'].append(name)
     
     def _able_to_add_eval(self, field_1, field_2) : 
         assert (field_1, field_2) in \
@@ -92,13 +95,17 @@ class FuzzyCombiner() :
     
     def add_evaluation(
         self, 
-        field_1, 
-        field_2, 
+        name,
         eval_function,
         **kwargs
     ) : 
+        names_list = self.config['pairwise_matches']['names']
+        pairs_list = self.config['pairwise_matches']['columns']
+        assert name in names_list, f'not a valid name : {name}'
+        field_dict = dict(zip(names_list, pairs_list))
+        field_1, field_2 = field_dict[name]
         self._able_to_add_eval(field_1, field_2)
-        self.config['comparison_metrics'][(field_1,field_2)] = \
+        self.config['comparison_metrics'][name] = \
             eval_function
         
         evaluation_data = np.concatenate(
