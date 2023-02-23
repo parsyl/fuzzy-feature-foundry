@@ -84,12 +84,12 @@ class FuzzyCombiner() :
             self.config['pairwise_matches']['columns'], \
                 f"{field_1}, {field_2} not added to matches"
     
-    def add_evaluation(
+    def add_evaluation( 
         self, 
         name,
         eval_function,
         **kwargs
-    ) : 
+    ) : # add some kind of filter so it doesn't blow the thing up
         """
         Add an evaluation for comparison `name` using eval function
         and keyword args `kwargs`
@@ -124,10 +124,11 @@ class FuzzyCombiner() :
             nms[1]+'_'+field_2, 
             '_'.join([nms[0],field_1,nms[1],field_2])
         ]
-        self.evals[(field_1, field_2)] = pd.DataFrame().\
+        self.evals[name] = pd.DataFrame().\
             from_dict(out, orient='index',columns=cols)
     
-    def compile_evaluations(self) : 
+    # function to filter evaluation
+    def compile_evaluations(self) : # add some kind of filter for each
         """
         Bring all evaluations into a single dataframe
         """
