@@ -1,7 +1,6 @@
-from fuzzy_features import * 
+from fuzzy_feature_foundry.fuzzy_features import * 
 import pandas as pd
 import numpy as np
-from scipy.spatial.distance import cosine
 from sklearn.feature_extraction.text import (CountVectorizer, 
 TfidfVectorizer) 
 from sklearn.metrics.pairwise import (
