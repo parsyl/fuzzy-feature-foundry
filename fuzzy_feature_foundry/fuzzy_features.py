@@ -116,11 +116,11 @@ class FuzzyCombiner() :
             self.data_2.loc[d_2,field_2], 
             eval_matrix[(self.data_1.loc[d_1,field_1], 
                 self.data_2.loc[d_2,field_2])] 
-        ]
-        for d_1 in self.data_1_ids 
-        for d_2 in self.data_2_ids
-        if (self.data_1.loc[d_1,field_1], 
-                self.data_2.loc[d_2,field_2]) in eval_matrix
+            ]
+            for d_1 in self.data_1_ids 
+                for d_2 in self.data_2_ids
+            if (self.data_1.loc[d_1,field_1], 
+                    self.data_2.loc[d_2,field_2]) in eval_matrix
         }
         nms = self.config['names'][0]
         cols = [
@@ -187,17 +187,18 @@ def make_comparisons(dist, neighbors, d_1, d_2) :
     d_1 - numpy array of unique values in data_1
     d_2 - numpy array of unique values in data_2
     """
-    comparisons = {}
-    for i in range(dist.shape[0]) : 
-        row_d , row_n = dist[i,:], neighbors[i,:]
-        for d,n in zip(row_d, row_n) :
-            comparisons[(d_1[i],d_2[n])] = d
+#    comparisons = {}
+#    for i in range(dist.shape[0]) : 
+#        row_d , row_n = dist[i,:], neighbors[i,:]
+#        for d,n in zip(row_d, row_n) :
+#            comparisons[(d_1[i],d_2[n])] = d
+#    return comparisons
+    comparisons = { ### would this work?
+        (d_1[i],d_2[n]) : d
+        for i in range(dist.shape[0])
+            for d,n in zip(dist[i,:], neighbors[i,:])
+    }
     return comparisons
-#    { ### would this work?
-#        (d_1[i],d_2[n]) : d
-#        for i in range(dist.shape[0])
-#            for d,n in zip(dist[i,:], neighbors[i,:])
-#    }
 def dummies_met(
     data_1 : pd.Series, 
     data_2 : pd.Series, 
@@ -309,7 +310,7 @@ def continuous_nearest_neighbors(
 ) : 
     """
     Nearest Neighbors on a column pair that does not need to be vectorized
-    
+
     """
     assert True #make sure continuous columns
     d_1, d_2, d_all = preprocess_unique(data_1, data_2)
